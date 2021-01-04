@@ -1,8 +1,8 @@
-FROM registry.access.redhat.com/ubi7/ubi:7.9-228
+FROM registry.access.redhat.com/ubi7/ubi:7.9-262
 
 ### BEGIN REMOTE SOURCE
 ARG REMOTE_SOURCE_DIR=/tmp/remote_source
-ARG REMOTE_SOURCE_REF=7feed55e71857dd885962fb843cd52a6980345b6
+ARG REMOTE_SOURCE_REF=9aaa672f8ab4ea8fe89d0a6808a8555cd7652d11
 ARG REMOTE_SOURCE_REP=https://github.com/gaohoward/YamlConfiger.git
 RUN yum install -y git && yum clean all && rm -rf /var/cache/yum
 RUN mkdir -p $REMOTE_SOURCE_DIR/app
