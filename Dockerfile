@@ -2,9 +2,11 @@ FROM quay.io/hgao/amq-openshift-image:cinit1.9
 
 USER root
 
+ADD script /opt/amq-broker/script
+
 ### BEGIN REMOTE SOURCE
 ARG REMOTE_SOURCE_DIR=/tmp/remote_source
-ARG REMOTE_SOURCE_REF=9aaa672f8ab4ea8fe89d0a6808a8555cd7652d11
+ARG REMOTE_SOURCE_REF=10d5afae06467a73b3e1374ea29b2859f791b31d
 ARG REMOTE_SOURCE_REP=https://github.com/gaohoward/YamlConfiger.git
 RUN yum install -y git && yum clean all && rm -rf /var/cache/yum
 RUN mkdir -p $REMOTE_SOURCE_DIR/app
