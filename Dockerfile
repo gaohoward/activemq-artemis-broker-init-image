@@ -1,4 +1,4 @@
-FROM quay.io/hgao/amq-openshift-image:cinit1.9
+FROM quay.io/hgao/amq-openshift-image:cinit-v1.0
 
 USER root
 
