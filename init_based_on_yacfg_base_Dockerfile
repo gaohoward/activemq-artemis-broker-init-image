@@ -1,0 +1,8 @@
+
+FROM quay.io/hgao/yacfg-init-base:v1.0
+
+USER root
+
+ADD script /opt/amq-broker/script
+
+ENV PATH "$PATH:/opt/rh/rh-python36/root/usr/bin"
