@@ -227,6 +227,7 @@ class KeycloakLoginModule(LoginModule):
                             ('enablecors', 'enable-cors'),
                             ('corsmaxage', 'cors-max-age'),
                             ('corsallowedmethods', 'cors-allowed-methods'),
+                            ('corsallowedheaders', 'cors-allowed-headers'),
                             ('corsexposedheaders', 'cors-exposed-headers'),
                             ('exposetoken', 'expose-token'),
                             ('beareronly', 'bearer-only'),
