@@ -230,7 +230,7 @@ class KeycloakLoginModule(LoginModule):
                             ('corsexposedheaders', 'cors-exposed-headers'),
                             ('exposetoken', 'expose-token'),
                             ('beareronly', 'bearer-only'),
-                            ('autodetectbeareronly', 'auto-detect-bearer-only'),
+                            ('autodetectbeareronly', 'autodetect-bearer-only'),
                             ('connectionpoolsize', 'connection-pool-size'),
                             ('allowanyhostname', 'allow-any-hostname'),
                             ('disabletrustmanager', 'disable-trust-manager'),
@@ -243,7 +243,7 @@ class KeycloakLoginModule(LoginModule):
                             ('registernodeatstartup', 'register-node-at-startup'),
                             ('registernodeperiod', 'register-node-period'),
                             ('tokenstore', 'token-store'),
-                            ('adapterstatecookiepath', 'adapter-state-cookie-path'),
+                            ('tokencookiepath', 'token-cookie-path'),
                             ('principalattribute', 'principal-attribute'),
                             ('proxyurl', 'proxy-url'),
                             ('turnoffchangesessionidonlogin', 'turn-off-change-session-id-on-login'),
@@ -585,11 +585,7 @@ if __name__ == '__main__':
     cr_file = os.getenv('SECURITY_CFG_YAML')
 
     with open(cr_file, "r") as file:
-        # The FullLoader parameter handles the conversion from YAML
-        # scalar values to Python the dictionary format
-        # security = yaml.load(file, Loader=yaml.FullLoader)
         security = yaml.safe_load(file)
-
         login_modules = {}
         propertiesLoginModules = security['spec']['loginmodules']['propertiesloginmodules']
         for module in propertiesLoginModules:
