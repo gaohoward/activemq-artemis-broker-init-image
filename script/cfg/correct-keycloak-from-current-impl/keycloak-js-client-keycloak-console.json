@@ -1,0 +1,5 @@
+{
+  "realm": "artemis-keycloak-demo",
+  "clientId": "artemis-console",
+  "url": "http://keycloak.3387.com/auth"
+}
