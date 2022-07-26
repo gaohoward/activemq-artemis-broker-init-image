@@ -33,6 +33,8 @@ ARTEMIS_PROFILE_NAME = 'artemis.profile'
 BROKER_XML_NAME = 'broker.xml'
 MANAGEMENT_XML_NAME = 'management.xml'
 BOOTSTRAP_NAME = 'bootstrap.xml'
+CERT_USERS_PROP_FILE_NAME = 'cert-users.properties'
+CERT_ROLES_PROP_FILE_NAME = 'cert-roles.properties'
 
 LOGIN_CONFIG = 'etc/' + LOGIN_CONFIG_NAME
 USERS_PROP_FILE = 'etc/' + USERS_PROP_FILE_NAME
@@ -41,6 +43,8 @@ ARTEMIS_PROFILE = 'etc/' + ARTEMIS_PROFILE_NAME
 BROKER_XML = 'etc/' + BROKER_XML_NAME
 MANAGEMENT_XML = 'etc/' + MANAGEMENT_XML_NAME
 BOOTSTRAP = 'etc/' + BOOTSTRAP_NAME
+CERT_USERS_PROP_FILE = 'etc/' + CERT_USERS_PROP_FILE_NAME
+CERT_ROLES_PROP_FILE = 'etc/' + CERT_ROLES_PROP_FILE_NAME
 
 
 class ExtraResource:
@@ -48,11 +52,34 @@ class ExtraResource:
         pass
 
 
+def get_prop_file_header():
+    prop_file_header = '#\n'
+    prop_file_header += '# Licensed to the Apache Software Foundation (ASF) under one or more\n'
+    prop_file_header += '# contributor license agreements. See the NOTICE file distributed with\n'
+    prop_file_header += '# this work for additional information regarding copyright ownership.\n'
+    prop_file_header += '# The ASF licenses this file to You under the Apache License, Version 2.0\n'
+    prop_file_header += '# (the "License"); you may not use this file except in compliance with\n'
+    prop_file_header += '# the License. You may obtain a copy of the License at\n'
+    prop_file_header += '#\n'
+    prop_file_header += '#     http://www.apache.org/licenses/LICENSE-2.0\n'
+    prop_file_header += '#\n'
+    prop_file_header += '# Unless required by applicable law or agreed to in writing, software\n'
+    prop_file_header += '# distributed under the License is distributed on an "AS IS" BASIS,\n'
+    prop_file_header += '# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n'
+    prop_file_header += '# See the License for the specific language governing permissions and\n'
+    prop_file_header += '# limitations under the License.\n'
+    prop_file_header += '#\n'
+    return prop_file_header
+
+
 class PropUsersFile:
-    def __init__(self, prop_file):
+    def __init__(self, prop_file, password_key):
         self.prop_file = prop_file
+        self.password_key = password_key
 
     def merge_from(self, new_users):
+        if not self.prop_file.is_file():
+            self.create_new_prop_file()
         comments = []
         users = OrderedDict()
         with open(self.prop_file, 'rt') as dst_user_file:
@@ -66,7 +93,8 @@ class PropUsersFile:
                     users[user] = password
         for each_user in new_users:
             user = each_user['name']
-            password = each_user['password']
+            if self.password_key in each_user:
+                password = each_user[self.password_key]
             users[user] = password
         with open(self.prop_file, 'wt') as dst:
             dst.writelines(comments)
@@ -76,12 +104,18 @@ class PropUsersFile:
                 dst.write(users[key])
                 dst.write('\n')
 
+    def create_new_prop_file(self):
+        with open(self.prop_file, 'wt') as stream:
+            stream.write(get_prop_file_header())
+
 
 class PropRolesFile:
     def __init__(self, prop_file):
         self.prop_file = prop_file
 
     def merge_from(self, new_users):
+        if not self.prop_file.is_file():
+            self.create_new_prop_file()
         comments = []
         roles = OrderedDict()
         with open(self.prop_file, 'rt') as dst_role_file:
@@ -117,6 +151,10 @@ class PropRolesFile:
                     dst.write(user)
                     first = False
                 dst.write('\n')
+
+    def create_new_prop_file(self):
+        with open(self.prop_file, 'wt') as stream:
+            stream.write(get_prop_file_header())
 
 
 class LoginModule:
@@ -196,9 +234,31 @@ class PropertiesLoginModule(LoginModule):
     def configure(self, context, target_domain_type):
         if len(self.module['users']) > 0:
             dst_prop_users_cfg = context.get_users_prop_file()
-            dst_prop_users = PropUsersFile(dst_prop_users_cfg.absolute())
+            dst_prop_users = PropUsersFile(dst_prop_users_cfg.absolute(), 'password')
             dst_prop_users.merge_from(self.module['users'])
             dst_prop_roles_cfg = context.get_roles_prop_file()
+            dst_prop_roles = PropRolesFile(dst_prop_roles_cfg)
+            dst_prop_roles.merge_from(self.module['users'])
+
+
+class TextFileCertificateLoginModule(LoginModule):
+    def __init__(self, name, module1):
+        LoginModule.__init__(self, name)
+        self.module = module1
+
+    def get_class_name(self):
+        return 'org.apache.activemq.artemis.spi.core.security.jaas.TextFileCertificateLoginModule'
+
+    def get_properties(self):
+        return [['org.apache.activemq.jaas.textfiledn.user', CERT_USERS_PROP_FILE_NAME], ['org.apache.activemq.jaas.textfiledn.role',
+                                                                                           CERT_ROLES_PROP_FILE_NAME]]
+
+    def configure(self, context, target_domain_type):
+        if len(self.module['users']) > 0:
+            dst_prop_users_cfg = context.get_cert_users_prop_file()
+            dst_prop_users = PropUsersFile(dst_prop_users_cfg.absolute(), 'dnname')
+            dst_prop_users.merge_from(self.module['users'])
+            dst_prop_roles_cfg = context.get_cert_roles_prop_file()
             dst_prop_roles = PropRolesFile(dst_prop_roles_cfg)
             dst_prop_roles.merge_from(self.module['users'])
 
@@ -430,6 +490,9 @@ class JaasLoginConfig:
     def update_console_domain(self, new_domain, context):
         self.update_domain(1, new_domain, context)
 
+    def update_cert_domain(self, new_domain, context):
+        self.update_domain(2, new_domain, context)
+
     def update_domain(self, position, new_domain, context):
         self.load(context)
         if len(self.domain_list) > position:
@@ -559,6 +622,28 @@ class SecurityDomain:
 
     def configure(self, config_context):
         pass
+
+
+class CertDomain(SecurityDomain):
+    def __init__(self, domain, domain_type, context):
+        SecurityDomain.__init__(self, domain, domain_type, context)
+
+    def configure(self, config_context):
+        # this has to be the third domain section
+        print("configuring cert domain", self.get_name())
+        if self.get_name() is not None and len(self.get_name()) > 0:
+            login_config = JaasLoginConfig(config_context.get_login_config_file())
+            login_config.update_cert_domain(self, config_context)
+
+            dst_bootstrap = config_context.get_bootstrap_file()
+
+            with open(dst_bootstrap.absolute(), 'rt') as bootstrap_xml:
+                bootstrap = bootstrap_xml.read()
+                new_bootstrap = re.sub(r'(<jaas-security domain=.*?)/>', r'\1 certificate-domain="' + self.get_name() + r'"/>', bootstrap)
+            with open(dst_bootstrap.absolute(), 'wt') as bootstrap_xml:
+                bootstrap_xml.write(new_bootstrap)
+            for lm in self.login_modules:
+                lm.configure(config_context, 'cert-domain')
 
 
 class BrokerSecurityDomain(SecurityDomain):
@@ -974,6 +1059,7 @@ class ConfigContext:
         self.broker_security_settings = None
         self.broker_domain = None
         self.console_domain = None
+        self.cert_domain = None
         self.management_setting = None
         self.extra_resources = []
 
@@ -992,8 +1078,14 @@ class ConfigContext:
     def get_users_prop_file(self):
         return Path(self.dst_root).joinpath(USERS_PROP_FILE)
 
+    def get_cert_users_prop_file(self):
+        return Path(self.dst_root).joinpath(CERT_USERS_PROP_FILE)
+
     def get_roles_prop_file(self):
         return Path(self.dst_root).joinpath(ROLES_PROP_FILE)
+
+    def get_cert_roles_prop_file(self):
+        return Path(self.dst_root).joinpath(CERT_ROLES_PROP_FILE)
 
     def get_management_xml_file(self):
         return Path(self.dst_root).joinpath(MANAGEMENT_XML)
@@ -1019,6 +1111,9 @@ class ConfigContext:
     def set_broker_domain(self, domain):
         self.broker_domain = domain
 
+    def set_cert_domain(self, domain):
+        self.cert_domain = domain
+
     def get_login_config_file(self):
         return Path(self.dst_root).joinpath(LOGIN_CONFIG)
 
@@ -1028,6 +1123,8 @@ class ConfigContext:
             self.broker_domain.configure(self)
         if self.console_domain:
             self.console_domain.configure(self)
+        if self.cert_domain:
+            self.cert_domain.configure(self)
 
     def apply_broker_security(self):
         print("Applying broker security settings")
@@ -1056,18 +1153,26 @@ class ConfigContext:
     def parse_config_cr(self, cr_file):
         with open(cr_file, "r") as file:
             self.security_cr = yaml.safe_load(file)
-            # login_modules = {}
-            propertiesLoginModules = self.security_cr['spec']['loginmodules']['propertiesloginmodules']
-            for module in propertiesLoginModules:
-                self.add_login_module(PropertiesLoginModule(module['name'], module))
 
-            guestloginmodules = self.security_cr['spec']['loginmodules']['guestloginmodules']
-            for module in guestloginmodules:
-                self.add_login_module(GuestLoginModule(module['name'], module))
+            if 'propertiesloginmodules' in self.security_cr['spec']['loginmodules']:
+                propertiesLoginModules = self.security_cr['spec']['loginmodules']['propertiesloginmodules']
+                for module in propertiesLoginModules:
+                    self.add_login_module(PropertiesLoginModule(module['name'], module))
 
-            keycloakloginmodules = self.security_cr['spec']['loginmodules']["keycloakloginmodules"]
-            for module in keycloakloginmodules:
-                self.add_login_module(KeycloakLoginModule(module['name'], module))
+            if 'guestloginmodules' in self.security_cr['spec']['loginmodules']:
+                guestloginmodules = self.security_cr['spec']['loginmodules']['guestloginmodules']
+                for module in guestloginmodules:
+                    self.add_login_module(GuestLoginModule(module['name'], module))
+
+            if 'keycloakloginmodules' in self.security_cr['spec']['loginmodules']:
+                keycloakloginmodules = self.security_cr['spec']['loginmodules']['keycloakloginmodules']
+                for module in keycloakloginmodules:
+                    self.add_login_module(KeycloakLoginModule(module['name'], module))
+
+            if 'textfilecertificateloginmodules' in self.security_cr['spec']['loginmodules']:
+                textfilecertloginmodules = self.security_cr['spec']['loginmodules']['textfilecertificateloginmodules']
+                for module in textfilecertloginmodules:
+                    self.add_login_module(TextFileCertificateLoginModule(module['name'], module))
 
             if 'brokerdomain' in self.security_cr['spec']['securitydomains']:
                 broker_domain = self.security_cr['spec']['securitydomains']['brokerdomain']
@@ -1078,6 +1183,11 @@ class ConfigContext:
                 console_domain = self.security_cr['spec']['securitydomains']['consoledomain']
                 if console_domain['name'] is not None:
                     self.set_console_domain(ConsoleDomain(console_domain, 'console', self))
+
+            if 'certdomain' in self.security_cr['spec']['securitydomains']:
+                cert_domain = self.security_cr['spec']['securitydomains']['certdomain']
+                if cert_domain['name'] is not None:
+                    self.set_cert_domain(CertDomain(cert_domain, 'cert', self))
 
             # now security-settings for broker.xml
             if 'securitysettings' in self.security_cr['spec']:

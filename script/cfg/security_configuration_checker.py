@@ -546,3 +546,64 @@ class SecurityConfigurationChecker:
                     return False
                 i += 1
         return True
+
+    def domain_has_text_file_cert_login_module(self, domain_name, flag, debug, reload):
+        with open(self.context.get_login_config_file(), "rt") as login_config:
+            stage = "start"
+
+            login_module_found = False
+            debug_prop_found = False
+            reload_prop_found = False
+            user_file_prop_found = False
+            roles_file_prop_found = False
+            for line in login_config:
+                if line.find(domain_name + ' {') >= 0:
+                    stage = "in-domain"
+                    continue
+                if stage == "in-domain":
+                    if line.find('};') >= 0:
+                        break
+                    if line.find(
+                            "org.apache.activemq.artemis.spi.core.security.jaas.TextFileCertificateLoginModule") >= 0 and line.find(
+                        flag) >= 0:
+                        login_module_found = True
+                        continue
+                    if login_module_found and line.find("debug=" + debug) >= 0:
+                        debug_prop_found = True
+                        continue
+                    if login_module_found and line.find('reload=' + reload) >= 0:
+                        reload_prop_found = True
+                        continue
+                    if login_module_found and line.find('org.apache.activemq.jaas.textfiledn.user="cert-users.properties"') >= 0:
+                        user_file_prop_found = True
+                        continue
+                    if login_module_found and line.find('org.apache.activemq.jaas.textfiledn.role="cert-roles.properties";') >= 0:
+                        roles_file_prop_found = True
+                        # last prop
+                        break
+            if debug == '':
+                debug_prop_found = not debug_prop_found
+            if reload == '':
+                reload_prop_found = not reload_prop_found
+            result = login_module_found and debug_prop_found and reload_prop_found and user_file_prop_found and roles_file_prop_found
+            if not result:
+                print('login_module_found', login_module_found)
+                print('debug_prop_found', debug_prop_found)
+                print('reload_prop_found', reload_prop_found)
+                print('user_file_prop_found', user_file_prop_found)
+                print('roles_file_prop_found', roles_file_prop_found)
+                print("the result file: ")
+                dump_file(self.context.get_login_config_file())
+        return result
+
+    def bootstrap_has_cert_domain(self, domain_name):
+        bootstrap_file = self.context.get_bootstrap_file()
+        return check_all_lines_in_file(bootstrap_file, ['   <jaas-security domain="activemq"' + ' certificate-domain="' + domain_name + '"/>'])
+
+    def user_prop_file_has_users(self, prop_file, user_list):
+        users_file = self.context.get_config_file_path(prop_file)
+        return check_all_lines_in_file(users_file, user_list)
+
+    def role_prop_file_has_roles(self, prop_file, role_list):
+        role_file = self.context.get_config_file_path(prop_file)
+        return check_all_lines_in_file(role_file, role_list)

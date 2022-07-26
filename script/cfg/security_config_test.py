@@ -30,6 +30,20 @@ class TestSecurityConfiguration(unittest.TestCase):
         shutil.rmtree(self.broker_instance_dir)
         pass
 
+    def test_config_cert_domain(self):
+        self.context.parse_config_cr("./test-cert-domain-cr.yaml")
+        self.context.apply()
+        the_checker = checker.SecurityConfigurationChecker(self.context)
+        self.assertTrue(the_checker.domain_has_prop_login_module("activemq", "required", "true", "true"))
+        self.assertTrue(the_checker.domain_has_text_file_cert_login_module("CertLogin", "required", "true", ''))
+        self.assertTrue(the_checker.bootstrap_has_cert_domain("CertLogin"))
+        self.assertTrue(the_checker.prop_module_has_roles(["admin = 9gIY0RrT", "role1 = user1,user2", "role2 = user1", "role3 = user2"]))
+        self.assertTrue(the_checker.prop_module_has_users(["9gIY0RrT = ENC(1024:6FB4782966A8C4303569AE7DEFA4A8A0E8BAD0019CD77814CE43E2CAF4F84B4A:046C735DED79CD146A9ADB8C756732BD02EF8CE42704CC43B89C82F6A765C2D706146A9DE521DA71C0283F6D57FBC623EACE687F2EF936A391D8AD263AB71B67",
+                                                           "user1 = password1",
+                                                           "user2 = password2"]))
+        self.assertTrue(the_checker.user_prop_file_has_users("cert-users.properties", ["producer = CN=ActiveMQ Artemis Client, OU=Artemis, O=ActiveMQ, L=AMQ, ST=AMQ, C=AMQ"]))
+        self.assertTrue(the_checker.role_prop_file_has_roles("cert-roles.properties", ["producers = producer"]))
+
     def test_guest_login_modules(self):
         self.context.parse_config_cr("./test-guest-module-cr.yaml")
         self.context.apply()
