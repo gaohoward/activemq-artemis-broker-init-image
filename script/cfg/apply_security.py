@@ -478,6 +478,141 @@ class KeycloakLoginModule(LoginModule):
             context.add_extra_resources(CopyKeycloakDependencies())
 
 
+class LdapLoginModule(LoginModule):
+    def __init__(self, name, ldap_module):
+        LoginModule.__init__(self, name)
+        self.module = ldap_module
+
+    def get_class_name(self):
+        return 'org.apache.activemq.artemis.spi.core.security.jaas.LDAPLoginModule'
+
+    def get_properties(self):
+        print("ldap module: ", self.module)
+        props = [['initialContextFactory', 'com.sun.jndi.ldap.LdapCtxFactory']]
+        options = self.module['options']
+        if 'connectionurl' in options:
+            if options['connectionurl'] is not None:
+                p = ['connectionURL', options['connectionurl']]
+                props.append(p)
+            else:
+                print("Error: connection URL not specified")
+        if 'authentication' in options:
+            if options['authentication'] is not None:
+                p = ['authentication', options['authentication']]
+                props.append(p)
+        if 'connectionusername' in options:
+            if options['connectionusername'] is not None:
+                p = ['connectionUsername', options['connectionusername']]
+                props.append(p)
+        if 'connectionpassword' in options:
+            if options['connectionpassword'] is not None:
+                p = ['connectionPassword', options['connectionpassword']]
+                props.append(p)
+        if 'saslloginconfigscope' in options:
+            if options['saslloginconfigscope'] is not None:
+                p = ['saslLoginConfigScope', options['saslloginconfigscope']]
+                props.append(p)
+        if 'connectionprotocol' in options:
+            if options['connectionprotocol'] is not None:
+                p = ['connectionProtocol', options['connectionprotocol']]
+                props.append(p)
+        if 'connectionpool' in options:
+            if options['connectionpool'] is not None:
+                p = ['connectionPool', options['connectionpool']]
+                props.append(p)
+        if 'connectiontimeout' in options:
+            if options['connectiontimeout'] is not None:
+                p = ['connectionTimeout', options['connectiontimeout']]
+                props.append(p)
+        if 'readtimeout' in options:
+            if options['readtimeout'] is not None:
+                p = ['readTimeout', options['readtimeout']]
+                props.append(p)
+        if 'userbase' in options:
+            if options['userbase'] is not None:
+                p = ['userBase', options['userbase']]
+                props.append(p)
+        if 'usersearchmatching' in options:
+            if options['usersearchmatching'] is not None:
+                p = ['userSearchMatching', options['usersearchmatching']]
+                props.append(p)
+        if 'usersearchsubtree' in options:
+            if options['usersearchsubtree'] is not None:
+                if options['usersearchsubtree'] is True:
+                    p = ['userSearchSubtree', 'true']
+                else:
+                    p = ['userSearchSubtree', 'false']
+                props.append(p)
+        if 'userrolename' in options:
+            if options['userrolename'] is not None:
+                p = ['userRoleName', options['userrolename']]
+                props.append(p)
+        if 'rolebase' in options:
+            if options['rolebase'] is not None:
+                p = ['roleBase', options['rolebase']]
+                props.append(p)
+        if 'rolename' in options:
+            if options['rolename'] is not None:
+                p = ['roleName', options['rolename']]
+                props.append(p)
+        if 'rolesearchmatching' in options:
+            if options['rolesearchmatching'] is not None:
+                p = ['roleSearchMatching', options['rolesearchmatching']]
+                props.append(p)
+        if 'rolesearchsubtree' in options:
+            if options['rolesearchsubtree'] is not None:
+                if options['rolesearchsubtree'] is True:
+                    p = ['roleSearchSubtree', 'true']
+                else:
+                    p = ['roleSearchSubtree', 'false']
+                props.append(p)
+        if 'authenticateuser' in options:
+            if options['authenticateuser'] is not None:
+                if options['authenticateuser'] is True:
+                    p = ['authenticateUser', 'true']
+                else:
+                    p = ['authenticateUser', 'false']
+                props.append(p)
+        if 'referral' in options:
+            if options['referral'] is not None:
+                p = ['referral', options['referral']]
+                props.append(p)
+        if 'ignorepartialresultexception' in options:
+            if options['ignorepartialresultexception'] is not None:
+                if options['ignorepartialresultexception'] is True:
+                    p = ['ignorePartialResultException', 'true']
+                else:
+                    p = ['ignorePartialResultException', 'false']
+                props.append(p)
+        if 'expandroles' in options:
+            if options['expandroles'] is not None:
+                if options['expandroles'] is True:
+                    p = ['expandRoles', 'true']
+                else:
+                    p = ['expandRoles', 'false']
+                props.append(p)
+        if 'expandrolesmatching' in options:
+            if options['expandrolesmatching'] is not None:
+                p = ['expandRolesMatching', options['expandrolesmatching']]
+                props.append(p)
+        if 'passwordcodec' in options:
+            if options['passwordcodec'] is not None:
+                p = ['passwordCodec', options['passwordcodec']]
+                props.append(p)
+        if 'additionaloptions' in options:
+            if len(options['additionaloptions']) > 0:
+                for entry in options['additionaloptions']:
+                    p = [entry['key'], entry['value']]
+                    props.append(p)
+        return props
+
+    def get_dependent_modules(self, for_domain):
+        return []
+
+    def configure(self, context, taget_domain_type):
+        pass
+
+
 class JaasLoginConfig:
     def __init__(self, file_path):
         self.file = file_path
@@ -1173,6 +1308,11 @@ class ConfigContext:
                 textfilecertloginmodules = self.security_cr['spec']['loginmodules']['textfilecertificateloginmodules']
                 for module in textfilecertloginmodules:
                     self.add_login_module(TextFileCertificateLoginModule(module['name'], module))
+
+            if 'ldaploginmodules' in self.security_cr['spec']['loginmodules']:
+                ldaploginmodules = self.security_cr['spec']['loginmodules']['ldaploginmodules']
+                for module in ldaploginmodules:
+                    self.add_login_module(LdapLoginModule(module['name'], module))
 
             if 'brokerdomain' in self.security_cr['spec']['securitydomains']:
                 broker_domain = self.security_cr['spec']['securitydomains']['brokerdomain']

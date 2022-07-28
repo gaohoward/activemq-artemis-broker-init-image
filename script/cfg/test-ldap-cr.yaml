@@ -1,0 +1,92 @@
+typemeta:
+  kind: ActiveMQArtemisSecurity
+  apiversion: broker.amq.io/v1beta1
+objectmeta:
+  name:
+  generatename:
+  namespace:
+  selflink:
+  uid:
+  resourceversion:
+  generation: 0
+  creationtimestamp: 0001-01-01T00:00:00Z
+  deletiontimestamp: null
+  deletiongraceperiodseconds: null
+  labels: {}
+  annotations: {}
+  ownerreferences: []
+  finalizers: []
+  clustername:
+  managedfields: []
+spec:
+  loginmodules:
+    propertiesloginmodules: []
+    guestloginmodules: []
+    keycloakloginmodules: []
+    textfilecertificateloginmodules: []
+    ldaploginmodules:
+    - name: ldap1
+      options:
+        connectionurl: ldap://localhost:1024
+        authentication: simple
+        connectionusername: uid=admin,ou=system
+        connectionpassword: secret
+        saslloginconfigscope: null
+        connectionprotocol: s
+        connectionpool: null
+        connectiontimeout: null
+        readtimeout: null
+        userbase: dc=activemq,dc=org
+        usersearchmatching: (uid={0})
+        usersearchsubtree: false
+        userrolename: null
+        rolebase: dc=activemq,dc=org
+        rolename: cn
+        rolesearchmatching: (member=uid={1},dc=activemq,dc=org)
+        rolesearchsubtree: false
+        authenticateuser: null
+        referral: null
+        ignorepartialresultexception: null
+        expandroles: null
+        expandrolesmatching: null
+        passwordcodec: null
+        additionaloptions: []
+  securitydomains:
+    brokerdomain:
+      name: activemq
+      loginmodules:
+      - name: ldap1
+        flag: required
+        debug: null
+        reload: null
+    consoledomain:
+      name: null
+      loginmodules: []
+    certdomain:
+      name: null
+      loginmodules: []
+  securitysettings:
+    broker: []
+    management:
+      hawtioroles: []
+      connector:
+        host: null
+        port: null
+        rmiregistryport: null
+        jmxrealm: null
+        objectname: null
+        authenticatortype: null
+        secured: null
+        keystoreprovider: null
+        keystorepath: null
+        keystorepassword: null
+        truststoreprovider: null
+        truststorepath: null
+        truststorepassword: null
+        passwordcodec: null
+      authorisation:
+        allowedlist: []
+        defaultaccess: []
+        roleaccess: []
+  applytocrnames: []
+status: {}

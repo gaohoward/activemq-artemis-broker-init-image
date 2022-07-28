@@ -607,3 +607,53 @@ class SecurityConfigurationChecker:
     def role_prop_file_has_roles(self, prop_file, role_list):
         role_file = self.context.get_config_file_path(prop_file)
         return check_all_lines_in_file(role_file, role_list)
+
+    def domain_has_ldap_login_module(self, domain_name, flag, debug, reload, ldap_props):
+        with open(self.context.get_login_config_file(), "rt") as login_config:
+            stage = "start"
+
+            login_module_found = False
+            debug_prop_found = False
+            reload_prop_found = False
+            properties_ok = False
+            props_copy = ldap_props.copy()
+            for line in login_config:
+                if line.find(domain_name + ' {') >= 0:
+                    stage = "in-domain"
+                    continue
+                if stage == "in-domain":
+                    if line.find('};') >= 0:
+                        break
+                    if line.find(
+                            "org.apache.activemq.artemis.spi.core.security.jaas.LDAPLoginModule") >= 0 and line.find(
+                        flag) >= 0:
+                        login_module_found = True
+                        continue
+                    if login_module_found and line.find("debug=" + debug) >= 0:
+                        debug_prop_found = True
+                        continue
+                    if login_module_found and line.find('reload=' + reload) >= 0:
+                        reload_prop_found = True
+                        continue
+                    if login_module_found:
+                        for p_key in ldap_props:
+                            if line.find(p_key + '=') >= 0 and line.find(ldap_props[p_key]) >= 0:
+                                del props_copy[p_key]
+            if len(props_copy) != 0:
+                print("some properties not present", props_copy)
+                properties_ok = False
+            else:
+                properties_ok = True
+            if debug == '':
+                debug_prop_found = not debug_prop_found
+            if reload == '':
+                reload_prop_found = not reload_prop_found
+            result = login_module_found and debug_prop_found and reload_prop_found and properties_ok
+            if not result:
+                print('login_module_found', login_module_found)
+                print('debug_prop_found', debug_prop_found)
+                print('reload_prop_found', reload_prop_found)
+                print('properties_ok', properties_ok)
+                print("the result file: ")
+                dump_file(self.context.get_login_config_file())
+        return result

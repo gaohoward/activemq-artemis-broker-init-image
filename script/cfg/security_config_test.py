@@ -30,6 +30,26 @@ class TestSecurityConfiguration(unittest.TestCase):
         shutil.rmtree(self.broker_instance_dir)
         pass
 
+    def test_ldap_login_module(self):
+        self.context.parse_config_cr("./test-ldap-cr.yaml")
+        self.context.apply()
+        the_checker = checker.SecurityConfigurationChecker(self.context)
+        self.assertTrue(the_checker.domain_has_ldap_login_module('activemq', 'required', '', '',
+                                    {'initialContextFactory': 'com.sun.jndi.ldap.LdapCtxFactory',
+                                     'connectionURL': 'ldap://localhost:1024',
+                                     'authentication': 'simple',
+                                     'connectionUsername': 'uid=admin,ou=system',
+                                     'connectionPassword': 'secret',
+                                     'connectionProtocol': 's',
+                                     'userBase': 'dc=activemq,dc=org',
+                                     'userSearchMatching': '(uid={0})',
+                                     'userSearchSubtree': 'false',
+                                     'roleBase': 'dc=activemq,dc=org',
+                                     'roleName': 'cn',
+                                     'roleSearchMatching': '(member=uid={1},dc=activemq,dc=org)',
+                                     'roleSearchSubtree': 'false',
+                                    }))
+
     def test_config_cert_domain(self):
         self.context.parse_config_cr("./test-cert-domain-cr.yaml")
         self.context.apply()
